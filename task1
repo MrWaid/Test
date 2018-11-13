@@ -1,0 +1,414 @@
+/*Дано число N < 106 и последовательность целых чисел из[-231..231] длиной N.
+Требуется построить бинарное дерево поиска, заданное наивным порядком вставки.Т.е.,
+при добавлении очередного числа K в дерево с корнем root, если root→Key ≤ K,
+то узел K добавляется в правое поддерево root; иначе в левое поддерево root.
+Выведите элементы в порядке level - order(по слоям, “в ширину”).*/
+
+#include <iostream>
+
+template <class T>
+class Deq
+{
+private:
+	int bufsize = 4, head = 0, tail = 0, realBufsize = 0;
+	T *buffer;
+
+	void Grow();
+	void Clear();
+
+public:
+	Deq();
+	~Deq();
+
+	Deq(const Deq& other);
+	Deq(Deq&& other);
+	Deq& operator=(const Deq& other);
+	Deq& operator=(Deq&& other);
+
+	bool IsEmpty();
+	void PushFront(T value);
+	void PushBack(T value);
+	T PopFront();
+	T PopBack();
+};
+
+template <class T>
+Deq<T>::Deq(const Deq& other)
+{
+	buffer = new T[other.realBufsize];
+	bufsize = other.bufsize;
+	head = other.head;
+	tail = other.tail;
+	realBufsize = other.realBufsize;
+
+	for (int i = 0; i < bufsize; ++i)
+	{
+		buffer[i] = other.buffer[i];
+	}
+}
+
+template <class T>
+Deq<T>::Deq(Deq&& other)
+{
+	buffer = other.buffer;
+	bufsize = other.bufsize;
+	head = other.head;
+	tail = other.tail;
+	realBufsize = other.realBufsize;
+
+	for (int i = 0; i < bufsize; ++i)
+	{
+		buffer[i] = other.buffer[i];
+	}
+
+	other.buffer = nullptr;
+	other.bufsize = 0;
+	other.head = 0;
+	other.tail = 0;
+	other.realBufsize = 0;
+}
+
+template <class T>
+Deq<T> & Deq<T>::operator=(const Deq& other)
+{
+	delete[] buffer;
+	buffer = new T[other.realBufsize];
+	buffer = other.buffer;
+	bufsize = other.bufsize;
+	head = other.head;
+	tail = other.tail;
+	realBufsize = other.realBufsize;
+
+	for (int i = 0; i < bufsize; ++i)
+	{
+		buffer[i] = other.buffer[i];
+	}
+
+	return *this;
+}
+
+template <class T>
+Deq<T> & Deq<T>::operator=(Deq&& other)
+{
+	delete[] buffer;
+	buffer = other.buffer;
+	bufsize = other.bufsize;
+	head = other.head;
+	tail = other.tail;
+	realBufsize = other.realBufsize;
+
+	for (int i = 0; i < bufsize; ++i)
+	{
+		buffer[i] = other.buffer[i];
+	}
+
+	other.buffer = nullptr;
+	other.bufsize = 0;
+	other.head = 0;
+	other.tail = 0;
+	other.realBufsize = 0;
+
+	return *this;
+}
+
+template <class T>
+bool Deq<T>::IsEmpty()
+{
+	if (realBufsize == 0) return true;
+	else return false;
+}
+
+template <class T>
+void Deq<T>::PushFront(T value)
+{
+	if (bufsize == realBufsize)
+		Grow();
+
+	if (realBufsize != 0)
+	{
+		head = (head - 1 + bufsize) % bufsize;
+	}
+	buffer[head] = value;
+	++realBufsize;
+}
+
+template <class T>
+void Deq<T>::PushBack(T value)
+{
+	if (bufsize == realBufsize)
+		Grow();
+
+	if (realBufsize != 0)
+	{
+		tail = (tail + 1) % bufsize;
+	}
+	buffer[tail] = value;
+	++realBufsize;
+}
+
+template <class T>
+T Deq<T>::PopFront()
+{
+	if (IsEmpty()) return 0;
+
+	T result = buffer[head];
+	if (realBufsize != 1)
+	{
+		head = (head + 1) % bufsize;
+	}
+	realBufsize--;
+
+	return result;
+}
+
+template <class T>
+T Deq<T>::PopBack()
+{
+	if (IsEmpty()) return 0;
+
+	T result = buffer[tail];
+	if (realBufsize > 1)
+	{
+		tail = (tail - 1 + bufsize) % bufsize;
+	}
+	realBufsize--;
+
+	return result;
+}
+
+template <class T>
+void Deq<T>::Grow()
+{
+	bufsize *= 2;
+	T *new_buffer = new T[bufsize];
+	for (int i = 0; i < bufsize / 2; ++i)
+	{
+		new_buffer[i] = buffer[(head + i) % (bufsize / 2)];
+	}
+
+	head = 0;
+	tail = realBufsize - 1;
+
+	delete[] buffer;
+	buffer = new_buffer;
+}
+
+template <class T>
+void  Deq<T>::Clear()
+{
+	delete[] buffer;
+	tail = 0;
+	head = 0;
+	realBufsize = 0;
+	bufsize = 0;
+}
+
+template <class T>
+Deq<T>::Deq() :
+	bufsize(4),
+	head(0),
+	tail(0),
+	realBufsize(0)
+{
+	buffer = new T[bufsize];
+};
+
+template <class T>
+Deq<T>::~Deq()
+{
+	Clear();
+}
+
+template <class T>
+struct TreapNode
+{
+	T Key;
+
+	TreapNode* left;
+	TreapNode* right;
+	TreapNode* parent;
+
+	TreapNode();
+	TreapNode(T Key);
+};
+
+template <class T>
+TreapNode<T>::TreapNode() :
+	Key(),
+	left(nullptr),
+	right(nullptr),
+	parent(nullptr)
+{};
+
+template <class T>
+TreapNode<T>::TreapNode(T Key) :
+	Key(Key),
+	left(nullptr),
+	right(nullptr),
+	parent(nullptr)
+{};
+
+template <class T>
+class Treap
+{
+public:
+	TreapNode<T>* root;
+
+	Treap();
+	~Treap();
+	Treap(const Treap& other);
+	Treap(Treap&& other);
+	Treap& operator=(const Treap& other);
+	Treap& operator=(Treap&& other);
+
+	TreapNode<T>* Insert(TreapNode<T>* node, T Key, bool(*func)(T value1, T value2));
+	void DeleteTree(TreapNode<T>* node);
+	void preOrder(TreapNode<T>* node);
+	void widthOrder(TreapNode<T>* node, void(*func)(T Key));
+
+private:
+	void CopyNode(TreapNode<T>* node);
+};
+
+template <class T>
+TreapNode<T>* Treap<T>::Insert(TreapNode<T>* node, T Key, bool (*func)(T value1, T value2))
+{
+	TreapNode<T>* tmp = root;
+	if (node == nullptr)
+	{
+		node = new TreapNode<T>;
+		node->Key = Key;
+		node->left = nullptr;
+		node->right = nullptr;
+	}
+	else
+	{
+		if (func(node->Key, Key)) node->right = Insert(node->right, Key, func);
+		else node->left = Insert(node->left, Key, func);
+	}
+	return node;
+}
+
+template <class T>
+void Treap<T>::DeleteTree(TreapNode<T>* node)
+{
+	if (node != nullptr)
+	{
+		DeleteTree(node->left);
+		DeleteTree(node->right);
+		delete node;
+	}
+}
+
+template <class T>
+void Treap<T>::preOrder(TreapNode<T>* node)
+{
+	if (node != nullptr) 
+	{
+		PrintNode(node->Key);
+		preOrder(node->left);
+		preOrder(node->right);
+	}
+}
+
+template <class T>
+void Treap<T>::widthOrder(TreapNode<T>* node, void(*func)(T Key))
+{
+	Deq<TreapNode<T>*> queue;
+	queue.PushFront(node);
+	while (!queue.IsEmpty())
+	{
+		TreapNode<T>* tmp = queue.PopFront();
+		func(tmp->Key);
+		if (tmp->left != nullptr) queue.PushBack(tmp->left);
+		if (tmp->right != nullptr)	queue.PushBack(tmp->right);
+	}
+}
+
+template <class T>
+void Treap<T>::CopyNode(TreapNode<T>* node)
+{
+	if (node != nullptr)
+	{
+		root = Insert(root, node->Key);
+		CopyNode(node->left);
+		CopyNode(node->right);
+	}
+};
+
+template <class T>
+Treap<T>::Treap() :
+	root ()
+{}
+
+template <class T>
+Treap<T>::~Treap()
+{
+	DeleteTree(root);
+}
+
+template <class T>
+Treap<T>::Treap(const Treap& other)
+{
+	CopyNode(other.root);
+}
+
+template <class T>
+Treap<T>::Treap(Treap&& other)
+{
+	root = other.root;
+}
+
+template <class T>
+Treap<T>& Treap<T>::operator=(const Treap& other)
+{
+	CopyNode(other.root);
+	return *this;
+}
+
+template <class T>
+Treap<T>& Treap<T>::operator=(Treap&& other)
+{
+	DeleteTree(root);
+	root = other.root;
+
+	return *this;
+}
+
+template <class T>
+void PrintNode(T Key)
+{
+	std::cout << Key << " ";
+}
+
+bool less(const int v1, const int v2)
+{
+	return v1 < v2;
+}
+
+bool greater(const int v1, const int v2)
+{
+	return v1 > v2;
+}
+
+bool is_equal(const int v1, const int v2)
+{
+	return v1 == v2;
+}
+
+int main()
+{
+	Treap<int> b;
+
+	int N = 0, x = 0;
+	std::cin >> N;
+	for (int i = 0; i < N; ++i)
+	{
+		std::cin >> x;
+		b.root = b.Insert(b.root, x, less);
+	}
+
+	b.widthOrder(b.root, PrintNode);
+	
+	return 0;
+}
